@@ -5,7 +5,7 @@ RPC_SYSTEM=rpc.o
 
 all: $(RPC_SYSTEM)
 
-$(RPC_SYSTEM): rpc.c rpc.h
+$(RPC_SYSTEM): rpc.c rpc.h utils.h utils.c
 	$(CC) -c -o $@ $<
 
 # RPC_SYSTEM_A=rpc.a

@@ -1,0 +1,1 @@
+int verify_name(char *name);
