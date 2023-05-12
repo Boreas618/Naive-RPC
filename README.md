@@ -115,3 +115,21 @@ void *rpc_data_free (rpc_data* data)
 ```
 
 Frees the memory allocated for a dynamically allocated rpc_data struct.
+
+# Test
+
+To run your server program, type:
+
+```shell
+./rpc-server -p <port> &
+./rpc-client -i <ip-address> -p <port>
+
+```
+
+where:
+
+* ip-address is the IPv6 address of the VM on which the server is running.
+* port is the TCP (or other transport layer) port number of the server.
+
+The server is expected to listen for incoming connections on the port passed via command line arguments, on any
+of the hosts IPv6 network addresses
