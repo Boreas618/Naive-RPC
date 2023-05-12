@@ -53,3 +53,15 @@ void encode_data_call(int index, rpc_data *data, char *buf) {
     count_bytes += data->data2_len;
     buf[0] = count_bytes;
 }
+
+// Encode the response the handle into a sendable buffer
+void encode_data_handle(int8_t index, char *buf) {
+    // The first byte of the buffer is the size of the buffer
+    // The second byte of the buffer is 2, which indicates that this is a handle response
+    // The third byte of the buffer is the index of the function
+    int count_bytes = 0;
+    buf[1] = 2;
+    buf[2] = index;
+    count_bytes += 3;
+    buf[0] = count_bytes;
+}

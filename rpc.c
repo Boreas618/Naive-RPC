@@ -5,7 +5,13 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include "./utils.h"
+
+struct rpc_handle {
+    /* Add variable(s) for handle */
+    int8_t index;
+};
 
 struct rpc_server {
     int socket_fd;
@@ -125,8 +131,9 @@ void rpc_serve_all(rpc_server *srv) {
                 return;
             }
         } else {
-            // Else, send the index to the client
-            if (n = write(srv->client_fd, &handle->index, sizeof(int8_t)) < 0) {
+            // Else, send the encoded handle to the client
+            encode_data_handle(handle->index, buf);
+            if (n = write(srv->client_fd, buf, sizeof(buf)) < 0) {
                 perror("send");
                 return;
             }
@@ -159,11 +166,6 @@ struct rpc_client {
     int port;
     struct sockaddr_in addr;
     socklen_t addr_len;
-};
-
-struct rpc_handle {
-    /* Add variable(s) for handle */
-    int8_t index;
 };
 
 rpc_client *rpc_init_client(char *addr, int port) {
@@ -218,12 +220,12 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
         return NULL;
     }
 
-    // Receive the uint8_t index from the server
-    int8_t index = 0;
-    if (n = read(cl->socket_fd, &index, sizeof(int8_t)) < 0) {
+    // Receive the encoded handle from the server and derive the index
+    if(n = read(cl->socket_fd, buf, sizeof(buf)) < 0) {
         perror("recv");
         return NULL;
     }
+    int8_t index = buf[2];
     
     // If the handle is invalid, return NULL
     if (index == -1) {
@@ -261,11 +263,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     // If the response is invalid, return NULL
     // Else, return the response
-    if (response->data1 == -1) {
-        return NULL;
-    } else {
-        return response;
-    }
+    return NULL;
 }
 
 void rpc_close_client(rpc_client *cl) {
