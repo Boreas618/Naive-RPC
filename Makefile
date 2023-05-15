@@ -9,7 +9,7 @@ clean:
 all: $(RPC_SYSTEM)
 
 $(RPC_SYSTEM): rpc.c rpc.h utils.h utils.c
-	$(CC) -c -o $@ $<
+	$(CC) -Wall -c -o $@ $<
 
 # RPC_SYSTEM_A=rpc.a
 # $(RPC_SYSTEM_A): rpc.o
