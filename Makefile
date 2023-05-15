@@ -2,9 +2,6 @@ CC=cc
 RPC_SYSTEM=rpc.o
 
 .PHONY: format all
-
-clean:
-	rm -f $(RPC_SYSTEM) $(RPC_SYSTEM_A)
 	
 all: $(RPC_SYSTEM)
 
