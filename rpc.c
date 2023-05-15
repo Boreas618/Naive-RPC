@@ -13,6 +13,7 @@ void encode_data_find(char *name, char *buf);
 void encode_data_call(int index, rpc_data *data, char *buf);
 void encode_data_handle(int8_t index, char *buf);
 int create_listening_socket(int port_num);
+int open_clientfd(char *hostname, char *port);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
@@ -168,7 +169,6 @@ void rpc_serve_all(rpc_server *srv) {
 
 struct rpc_client {
     int socket_fd;
-    int port;
     struct sockaddr_in addr;
     socklen_t addr_len;
 };
@@ -180,30 +180,30 @@ rpc_client *rpc_init_client(char *addr, int port) {
         return NULL;
     }
 
-    // Create socket
+    // Convert the port to a string
+    char port_str[100];
+    sprintf(port_str, "%d", port);
+
+    // Create client socket
     int socket_fd = -1;
-    socket_fd = socket(AF_INET6, SOCK_STREAM, 0);
+    socket_fd = open_clientfd(addr, port_str);
     if (socket_fd == -1) {
-        perror("socket");
+        perror("create_client_socket");
         exit(EXIT_FAILURE);
     }
 
-    // Connect to server
-    struct sockaddr_in server_addr = {
-        .sin_family = AF_INET6,
-        .sin_port = htons(port),
-        .sin_addr.s_addr = inet_addr(addr)
-    };
-
-    if (connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("connect");
+    // Convert the addr into a sockaddr_in
+    struct sockaddr_in addr_in;
+    if (inet_pton(AF_INET6, addr, &addr_in.sin_addr) <= 0) {
+        perror("inet_pton");
         exit(EXIT_FAILURE);
     }
-
+    addr_in.sin_family = AF_INET6;
+    addr_in.sin_port = htons(port);
+    
     cl->socket_fd = socket_fd;
-    cl->port = port;
-    cl->addr = server_addr;
-    cl->addr_len = sizeof(server_addr);
+    cl->addr = addr_in;
+    cl->addr_len = sizeof(addr_in);
     
     return cl;
 }
@@ -393,4 +393,30 @@ int create_listening_socket(int port_num) {
 	freeaddrinfo(res);
 
 	return sockfd;
+}
+
+int open_clientfd(char *hostname, char *port) {
+  int clientfd;
+  struct addrinfo hints, *listp, *p;
+  
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_NUMERICSERV;
+  hints.ai_flags |=  AI_ADDRCONFIG;
+  
+  getaddrinfo(hostname, port, &hints, &listp);
+  
+  for(p = listp; p; p = p->ai_next) {
+    if ((clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
+      continue;
+    if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1)
+      break;
+    close(clientfd);
+  }
+  
+  freeaddrinfo(listp);
+  if(!p)
+    return -1;
+  else
+    return clientfd;
 }

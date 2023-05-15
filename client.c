@@ -11,6 +11,8 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    printf("finished init\n");
+
     rpc_handle *handle_add2 = rpc_find(state, "add2");
     if (handle_add2 == NULL) {
         fprintf(stderr, "ERROR: Function add2 does not exist\n");
