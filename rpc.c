@@ -6,72 +6,13 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-#include "./utils.h"
+#include <netdb.h>
 
-// Verify the name
-int verify_name(char *name) {
-    if (name == NULL) {
-        return -1;
-    }
-
-    if (strlen(name) > 1000) {
-        return -1;
-    }
-
-    for (int i = 0; i < strlen(name); i++) {
-        if (name[i] < 32 || name[i] > 126) {
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-// Encode the find request into a sendable buffer
-void encode_data_find(char *name, char *buf) {
-    // The first byte of the buffer is the size of the buffer
-    // The seond byte of the buffer is 0, which indicates that this is a find request
-    // The remaining bytes are the name of the function
-    int count_bytes = 0;
-    buf[1] = 0;
-    count_bytes += 2;
-    memcpy(buf + count_bytes, name, strlen(name));
-    count_bytes += strlen(name);
-    buf[0] = count_bytes;
-}
-
-// Encode the call request into a sendable buffer
-void encode_data_call(int index, rpc_data *data, char *buf) {
-    // The first byte of the buffer is the size of the buffer
-    // The second byte of the buffer is 1, which indicates that this is a call request
-    // The third byte of the buffer is the index of the function
-    // The next four bytes are the data1
-    // The next four bytes are the length of the data2
-    // The remaining bytes are the data2
-    int count_bytes = 0;
-    buf[1] = 1;
-    buf[2] = index;
-    count_bytes += 3;
-    memcpy(buf + count_bytes, &data->data1, sizeof(int));
-    count_bytes += sizeof(int);
-    memcpy(buf + count_bytes, &data->data2_len, 4);
-    count_bytes += 4;
-    memcpy(buf + count_bytes, data->data2, data->data2_len);
-    count_bytes += data->data2_len;
-    buf[0] = count_bytes;
-}
-
-// Encode the response the handle into a sendable buffer
-void encode_data_handle(int8_t index, char *buf) {
-    // The first byte of the buffer is the size of the buffer
-    // The second byte of the buffer is 2, which indicates that this is a handle response
-    // The third byte of the buffer is the index of the function
-    int count_bytes = 0;
-    buf[1] = 2;
-    buf[2] = index;
-    count_bytes += 3;
-    buf[0] = count_bytes;
-}
+int verify_name(char *name);
+void encode_data_find(char *name, char *buf);
+void encode_data_call(int index, rpc_data *data, char *buf);
+void encode_data_handle(int8_t index, char *buf);
+int create_listening_socket(int port_num);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
@@ -82,8 +23,6 @@ struct rpc_server {
     int socket_fd;
     int client_fd;
     int port;
-    struct sockaddr_in addr;
-    socklen_t addr_len;
     char **names;
     rpc_handler *handlers;
     int count_registered;
@@ -97,23 +36,11 @@ rpc_server *rpc_init_server(int port) {
         return NULL;
     }
 
-    // Create socket
+    // Create listening socket
     int socket_fd = -1;
-    socket_fd = socket(AF_INET6, SOCK_STREAM, 0);
+    socket_fd = create_listening_socket(port);
     if (socket_fd == -1) {
-        perror("socket");
-        exit(EXIT_FAILURE);
-    }
-    
-    // Bind socket
-    struct sockaddr_in addr = {
-        .sin_family = AF_INET6,
-        .sin_port = htons(port),
-        .sin_addr.s_addr = INADDR_ANY
-    };
-
-    if (bind(socket_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("bind");
+        perror("create_listening_socket");
         exit(EXIT_FAILURE);
     }
 
@@ -146,8 +73,6 @@ rpc_server *rpc_init_server(int port) {
     srv->socket_fd = socket_fd;
     srv->client_fd = client_fd;
     srv->port = port;
-    srv->addr = addr;
-    srv->addr_len = sizeof(addr);
     srv->count_registered = 0;
 
     return srv;
@@ -343,4 +268,114 @@ void rpc_data_free(rpc_data *data) {
         free(data->data2);
     }
     free(data);
+}
+
+// Verify the name
+int verify_name(char *name) {
+    if (name == NULL) {
+        return -1;
+    }
+
+    if (strlen(name) > 1000) {
+        return -1;
+    }
+
+    for (int i = 0; i < strlen(name); i++) {
+        if (name[i] < 32 || name[i] > 126) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// Encode the find request into a sendable buffer
+void encode_data_find(char *name, char *buf) {
+    // The first byte of the buffer is the size of the buffer
+    // The seond byte of the buffer is 0, which indicates that this is a find request
+    // The remaining bytes are the name of the function
+    int count_bytes = 0;
+    buf[1] = 0;
+    count_bytes += 2;
+    memcpy(buf + count_bytes, name, strlen(name));
+    count_bytes += strlen(name);
+    buf[0] = count_bytes;
+}
+
+// Encode the call request into a sendable buffer
+void encode_data_call(int index, rpc_data *data, char *buf) {
+    // The first byte of the buffer is the size of the buffer
+    // The second byte of the buffer is 1, which indicates that this is a call request
+    // The third byte of the buffer is the index of the function
+    // The next four bytes are the data1
+    // The next four bytes are the length of the data2
+    // The remaining bytes are the data2
+    int count_bytes = 0;
+    buf[1] = 1;
+    buf[2] = index;
+    count_bytes += 3;
+    memcpy(buf + count_bytes, &data->data1, sizeof(int));
+    count_bytes += sizeof(int);
+    memcpy(buf + count_bytes, &data->data2_len, 4);
+    count_bytes += 4;
+    memcpy(buf + count_bytes, data->data2, data->data2_len);
+    count_bytes += data->data2_len;
+    buf[0] = count_bytes;
+}
+
+// Encode the response the handle into a sendable buffer
+void encode_data_handle(int8_t index, char *buf) {
+    // The first byte of the buffer is the size of the buffer
+    // The second byte of the buffer is 2, which indicates that this is a handle response
+    // The third byte of the buffer is the index of the function
+    int count_bytes = 0;
+    buf[1] = 2;
+    buf[2] = index;
+    count_bytes += 3;
+    buf[0] = count_bytes;
+}
+
+int create_listening_socket(int port_num) {
+	int re, s, sockfd;
+	struct addrinfo hints, *res;
+
+	// Create address we're going to listen on (with given port number)
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET6;       // IPv4
+	hints.ai_socktype = SOCK_STREAM; // Connection-mode byte streams
+	hints.ai_flags = AI_PASSIVE;     // for bind, listen, accept
+
+    // convert port number to string
+    char service[100];
+    sprintf(service, "%d", port_num);
+
+	// node (NULL means any interface), service (port), hints, res
+	s = getaddrinfo(NULL, service, &hints, &res);
+	if (s != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+		exit(EXIT_FAILURE);
+	}
+
+	// Create socket
+	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (sockfd < 0) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+
+	// Reuse port if possible
+	re = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &re, sizeof(int)) < 0) {
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	}
+
+	// Bind address to the socket
+	if (bind(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+		perror("bind");
+		exit(EXIT_FAILURE);
+	}
+	freeaddrinfo(res);
+
+	return sockfd;
 }
