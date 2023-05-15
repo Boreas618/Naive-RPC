@@ -9,10 +9,13 @@ int main(int argc, char *argv[]) {
     rpc_server *state;
 
     state = rpc_init_server(3000);
+
     if (state == NULL) {
         fprintf(stderr, "Failed to init\n");
         exit(EXIT_FAILURE);
     }
+
+    printf("finished init\n");
 
     if (rpc_register(state, "add2", add2_i8) == -1) {
         fprintf(stderr, "Failed to register add2\n");

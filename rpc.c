@@ -44,21 +44,7 @@ rpc_server *rpc_init_server(int port) {
         exit(EXIT_FAILURE);
     }
 
-    // Listen on socket
-    if (listen(socket_fd, 1) == -1) {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-
-    // Accept connection
-    int client_fd = -1;
-    client_fd = accept(socket_fd, NULL, NULL);
-    if (client_fd == -1) {
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
-
-    // Initialize the name adn handler arrays
+    // Initialize the name and handler arrays
     srv->names = malloc(sizeof(char *) * 64);
     if (srv->names == NULL) {
         perror("malloc");
@@ -71,7 +57,7 @@ rpc_server *rpc_init_server(int port) {
     }
 
     srv->socket_fd = socket_fd;
-    srv->client_fd = client_fd;
+    srv->client_fd = -1;
     srv->port = port;
     srv->count_registered = 0;
 
@@ -94,6 +80,25 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
 }
 
 void rpc_serve_all(rpc_server *srv) {
+    // If the server is NULL, return
+    if (srv == NULL) {
+        return;
+    }
+
+    // Listen on socket
+    if (listen(srv->socket_fd, 1) == -1) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+
+    // Accept connection
+    int client_fd = -1;
+    srv->client_fd = accept(srv->socket_fd, NULL, NULL);
+    if (srv->client_fd == -1) {
+        perror("accept");
+        exit(EXIT_FAILURE);
+    }
+
     // Receive the buffer from the client
     // The size is the maximum size of a possible buffer
     char buf[1+1+1+4+4+100000];
