@@ -9,9 +9,9 @@
 #include <netdb.h>
 
 int verify_name(char *name);
-void encode_data_find(char *name, char *buf);
+void encode_data_find(char *name, int8_t *buf);
 void encode_data_call(int index, rpc_data *data, char *buf);
-void encode_data_handle(int8_t index, char *buf);
+void encode_data_handle(int8_t index, int8_t *buf);
 int create_listening_socket(int port_num);
 int open_clientfd(char *hostname, char *port);
 
@@ -101,7 +101,7 @@ void rpc_serve_all(rpc_server *srv) {
 
     // Receive the buffer from the client
     // The size is the maximum size of a possible buffer
-    char buf[1+1+1+4+4+100000];
+    int8_t buf[1+1+1+4+4+100000];
 
     // Read the buffer from the client
     int n = 0;
@@ -215,12 +215,12 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
     }
 
     // Encode the find request into a sendable buffer
-    char buf[sizeof(name)+2];
+    int8_t buf[sizeof(name)+2];
     encode_data_find(name, buf);
 
-    // Send the name to the server
     int n = 0;
-    if ((n = write(cl->socket_fd, buf, strlen(buf))) < 0) {
+
+    if ((n = write(cl->socket_fd, buf, sizeof(name)+2)) < 0) {
         perror("send");
         return NULL;
     }
@@ -244,6 +244,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
         return NULL;
     }
     handle->index = index;
+
     return handle;
 }
 
@@ -305,7 +306,7 @@ int verify_name(char *name) {
 }
 
 // Encode the find request into a sendable buffer
-void encode_data_find(char *name, char *buf) {
+void encode_data_find(char *name, int8_t *buf) {
     // The first byte of the buffer is the size of the buffer
     // The seond byte of the buffer is 0, which indicates that this is a find request
     // The remaining bytes are the name of the function
@@ -339,7 +340,7 @@ void encode_data_call(int index, rpc_data *data, char *buf) {
 }
 
 // Encode the response the handle into a sendable buffer
-void encode_data_handle(int8_t index, char *buf) {
+void encode_data_handle(int8_t index, int8_t *buf) {
     // The first byte of the buffer is the size of the buffer
     // The second byte of the buffer is 2, which indicates that this is a handle response
     // The third byte of the buffer is the index of the function
