@@ -118,15 +118,16 @@ void rpc_serve_all(rpc_server *srv) {
         memcpy(name, buf+2, buf[0]-2);
         name[buf[0]-2] = '\0';
 
-        int i = 0;
-        for(i = 0; i < srv->count_registered; i++) {
+        int index_of_handler = -1;
+        for(int i = 0; i < srv->count_registered; i++) {
             if(strcmp(srv->names[i], name) == 0 ) {
+                index_of_handler = i;
                 break;
             }
         }
 
         rpc_handle *handle = malloc(sizeof(rpc_handle));
-        handle->index = i;
+        handle->index = index_of_handler;
 
         if (handle == NULL) {
             // If the handle is invalid, send -1 to the client
