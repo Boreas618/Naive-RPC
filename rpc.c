@@ -92,7 +92,6 @@ void rpc_serve_all(rpc_server *srv) {
     }
 
     // Accept connection
-    int client_fd = -1;
     srv->client_fd = accept(srv->socket_fd, NULL, NULL);
     if (srv->client_fd == -1) {
         perror("accept");
@@ -105,7 +104,7 @@ void rpc_serve_all(rpc_server *srv) {
 
     // Read the buffer from the client
     int n = 0;
-    if (n = read(srv->client_fd, buf, sizeof(buf)) < 0) {
+    if ((n = read(srv->client_fd, buf, sizeof(buf))) < 0) {
         perror("recv");
         return;
     }
@@ -117,25 +116,36 @@ void rpc_serve_all(rpc_server *srv) {
         char name[1000];
         memcpy(name, buf+2, buf[0]-2);
         name[buf[0]-2] = '\0';
-        rpc_handle *handle = rpc_find(srv, name);
+
+        int i = 0;
+        for(i = 0; i < srv->count_registered; i++) {
+            if(strcmp(srv->names[i], name) == 0 ) {
+                break;
+            }
+        }
+
+        rpc_handle *handle = malloc(sizeof(rpc_handle));
+        handle->index = i;
+
         if (handle == NULL) {
             // If the handle is invalid, send -1 to the client
             int8_t index = -1;
-            if (n = write(srv->client_fd, &index, sizeof(int8_t)) < 0) {
+            if ((n = write(srv->client_fd, &index, sizeof(int8_t))) < 0) {
                 perror("send");
                 return;
             }
         } else {
             // Else, send the encoded handle to the client
             encode_data_handle(handle->index, buf);
-            if (n = write(srv->client_fd, buf, sizeof(buf)) < 0) {
+            if ((n = write(srv->client_fd, buf, sizeof(buf))) < 0) {
                 perror("send");
                 return;
             }
         }
     } else if (type == 1) {
+        return;
         // Call request
-        int8_t index = buf[2];
+        /*int8_t index = buf[2];
         int data1 = buf[3];
         int data2_len = buf[4];
         char data2[data2_len];
@@ -149,7 +159,7 @@ void rpc_serve_all(rpc_server *srv) {
             perror("rpc_call");
         } else {
             // ToDo
-        }
+        }*/
     } else {
         // Invalid request
         return;
@@ -210,13 +220,13 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
     // Send the name to the server
     int n = 0;
-    if (n = write(cl->socket_fd, buf, strlen(buf)) < 0) {
+    if ((n = write(cl->socket_fd, buf, strlen(buf))) < 0) {
         perror("send");
         return NULL;
     }
 
     // Receive the encoded handle from the server and derive the index
-    if(n = read(cl->socket_fd, buf, sizeof(buf)) < 0) {
+    if((n = read(cl->socket_fd, buf, sizeof(buf))) < 0) {
         perror("recv");
         return NULL;
     }
