@@ -11,7 +11,7 @@
 
 int verify_name(char *name);
 void encode_data_find(char *name, int8_t *buf);
-void encode_data_call(int index, rpc_data *data, char *buf);
+void encode_data_call(int index, rpc_data *data, int8_t *buf);
 void encode_data_handle(int8_t index, int8_t *buf);
 void encode_data_call_response(rpc_data *data, int8_t *buf);
 int create_listening_socket(int port_num);
@@ -154,12 +154,12 @@ void rpc_serve_all(rpc_server *srv) {
             int8_t index = buf[3];
             // Decode the data1
             int8_t *data1_ptr = buf + 4;
-            int data1 = (data1_ptr[0] << 24) | (data1_ptr[1] << 16) |
-                        (data1_ptr[2] << 8) | (data1_ptr[3]);
+            int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
+                        (data1_ptr[1] << 8) | (data1_ptr[0]);
 
             // Decode the length of data2
             int size_of_size_t = buf[2];
-            size_t *data2_len_ptr = buf + 4 + sizeof(int);
+            size_t *data2_len_ptr = (size_t *) (buf + 4 + sizeof(int));
             size_t data2_len = *data2_len_ptr;
 
             // Decode data2
@@ -302,13 +302,13 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     if (type == 3) {
         // Decode the data1
-        int *data1_ptr = buf + 3;
+        int *data1_ptr = (int *) (buf + 3);
         int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
                         (data1_ptr[1] << 8) | (data1_ptr[0]);
 
         // Decode the length of data2
         size_t data2_len = 0;
-        
+
         // Decode data2
         void *data2 = NULL;
 
@@ -369,7 +369,7 @@ void encode_data_find(char *name, int8_t *buf) {
 }
 
 // Encode the call request into a sendable buffer
-void encode_data_call(int index, rpc_data *data, char *buf) {
+void encode_data_call(int index, rpc_data *data, int8_t *buf) {
     // The first byte of the buffer is the size of the buffer
     // The second byte of the buffer is 1, which indicates that this is a call
     // request The third byte of the buffer is the size of the size_t The forth
