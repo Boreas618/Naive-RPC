@@ -48,6 +48,7 @@ rpc_server *rpc_init_server(int port) {
         exit(EXIT_FAILURE);
     }
 
+
     srv->socket_fd = socket_fd;
     srv->client_fd = -1;
     srv->port = port;
@@ -62,14 +63,25 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
         return -1;
     }
 
+    // Allocate memory for name_copy
+    char *name_copy = malloc(strlen(name) + 1);
+    if (name_copy == NULL) {
+        // Failed to allocate memory
+        return -1;
+    }
+
+    // Copy the name to name_copy
+    strcpy(name_copy, name);
+
     // register the name and handler
-    srv->names[srv->count_registered] = name;
+    srv->names[srv->count_registered] = name_copy;
     srv->handlers[srv->count_registered] = handler;
     srv->count_registered++;
 
     // return 0 on success, -1 on failure
     return 0;
 }
+
 
 void rpc_serve_all(rpc_server *srv) {
     // If the server is NULL, return
