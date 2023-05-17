@@ -27,8 +27,8 @@ struct rpc_server {
     int socket_fd;
     int client_fd;
     int port;
-    char **names;
-    rpc_handler *handlers;
+    char* names[10];
+    rpc_handler handlers[10];
     int count_registered;
 };
 
@@ -45,18 +45,6 @@ rpc_server *rpc_init_server(int port) {
     socket_fd = create_listening_socket(port);
     if (socket_fd == -1) {
         perror("create_listening_socket");
-        exit(EXIT_FAILURE);
-    }
-
-    // Initialize the name and handler arrays
-    srv->names = malloc(sizeof(char *) * 64);
-    if (srv->names == NULL) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    srv->handlers = malloc(sizeof(rpc_handler) * 64);
-    if (srv->handlers == NULL) {
-        perror("malloc");
         exit(EXIT_FAILURE);
     }
 

@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 
     printf("finished init\n");
 
-    rpc_handle *handle_add2 = rpc_find(state, "add2");
+    rpc_handle *handle_add2 = rpc_find(state, "muti2");
     if (handle_add2 == NULL) {
         fprintf(stderr, "ERROR: Function add2 does not exist\n");
         exit_code = 1;
