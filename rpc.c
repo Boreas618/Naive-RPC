@@ -134,14 +134,12 @@ void rpc_serve_all(rpc_server *srv) {
                     encode_data_handle(-1, buf);
                     if ((n = write(srv->client_fd, buf, 3)) < 0) {
                         perror("send");
-                        return;
                     }
                 } else {
                     // Else, send the encoded handle to the client
                     encode_data_handle(index_of_handler, buf);
                     if ((n = write(srv->client_fd, buf, 3)) < 0) {
                         perror("send");
-                        return;
                     }
                 }
 
@@ -178,17 +176,16 @@ void rpc_serve_all(rpc_server *srv) {
                     encode_data_call_response(outcome, buf);
                     if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
                         perror("send");
-                        return;
                     }
                 }
             } else {
                 // Invalid request
-                return;
+                perror("invalid request");
             }
         }
         if (n < 0) {
             perror("read");
-            return;
+            perror("client disconnected");
         }
     }
 }
