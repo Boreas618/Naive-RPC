@@ -20,6 +20,13 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
+    rpc_handle *handle_echo2 = rpc_find(state, "echo2");
+    if (handle_echo2 == NULL) {
+        fprintf(stderr, "ERROR: Function exho2 does not exist\n");
+        exit_code = 1;
+        goto cleanup;
+    }
+
     for (int i = 0; i < 2; i++) {
         /* Prepare request */
         char left_operand = i;
@@ -29,6 +36,17 @@ int main(int argc, char *argv[]) {
 
         /* Call and receive response */
         rpc_data *response_data = rpc_call(state, handle_add2, &request_data);
+        if (response_data == NULL) {
+            fprintf(stderr, "Function call of add2 failed\n");
+            exit_code = 1;
+            goto cleanup;
+        }
+
+        request_data.data1 = 1234;
+        request_data.data2_len = 4;
+        request_data.data2 = "abc";
+
+        response_data = rpc_call(state, handle_echo2, &request_data);
         if (response_data == NULL) {
             fprintf(stderr, "Function call of add2 failed\n");
             exit_code = 1;

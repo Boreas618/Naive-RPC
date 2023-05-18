@@ -5,6 +5,7 @@
 
 rpc_data *add2_i8(rpc_data *);
 rpc_data *lets_add2_i8(rpc_data *);
+rpc_data *echo2(rpc_data *);
 
 int main(int argc, char *argv[]) {
     rpc_server *state;
@@ -24,6 +25,11 @@ int main(int argc, char *argv[]) {
     }
 
     if (rpc_register(state, "muti2", lets_add2_i8) == -1) {
+        fprintf(stderr, "Failed to register add2\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (rpc_register(state, "echo2", echo2) == -1) {
         fprintf(stderr, "Failed to register add2\n");
         exit(EXIT_FAILURE);
     }
@@ -78,5 +84,26 @@ rpc_data *lets_add2_i8(rpc_data *in) {
     out->data1 = res;
     out->data2_len = 0;
     out->data2 = NULL;
+    return out;
+}
+
+rpc_data *echo2(rpc_data *in) {
+    /* Check data2 */
+    if (in->data2 == NULL || in->data2_len != 1) {
+        return NULL;
+    }
+
+    /* Parse request */
+    int n1 = in->data1;
+    void* n2 = in->data2;
+
+    /* Perform calculation */
+    printf("echo: arguments %d and %s\n", n1, n2);
+
+    /* Prepare response */
+    rpc_data *out = malloc(sizeof(rpc_data));
+    out->data1 = n1;
+    out->data2_len = in->data2_len;
+    out->data2 = n2;
     return out;
 }

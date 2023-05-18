@@ -16,7 +16,6 @@ void encode_data_handle(int8_t index, int8_t *buf);
 void encode_data_call_response(rpc_data *data, int8_t *buf);
 int create_listening_socket(int port_num);
 int open_clientfd(char *hostname, char *port);
-size_t reverse_bytes(size_t num);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
@@ -131,10 +130,7 @@ void rpc_serve_all(rpc_server *srv) {
                 }
             }
 
-            rpc_handle *handle = malloc(sizeof(rpc_handle));
-            handle->index = index_of_handler;
-
-            if (handle == NULL) {
+            if (index_of_handler == -1) {
                 // If the handle is invalid, send -1 to the client
                 encode_data_handle(-1, buf);
                 if ((n = write(srv->client_fd, buf, 3)) < 0) {
@@ -143,17 +139,18 @@ void rpc_serve_all(rpc_server *srv) {
                 }
             } else {
                 // Else, send the encoded handle to the client
-                encode_data_handle(handle->index, buf);
+                encode_data_handle(index_of_handler, buf);
                 if ((n = write(srv->client_fd, buf, 3)) < 0) {
                     perror("send");
                     return;
                 }
             }
+
         } else if (type == 1) {
             // Call request
             int8_t index = buf[3];
             // Decode the data1
-            int8_t *data1_ptr = buf + 4;
+            uint8_t *data1_ptr = buf + 4;
             int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
                         (data1_ptr[1] << 8) | (data1_ptr[0]);
 
@@ -164,7 +161,9 @@ void rpc_serve_all(rpc_server *srv) {
 
             // Decode data2
             void *data2;
-            data2 = buf + 4 + sizeof(int) + size_of_size_t;
+            data2 = malloc(data2_len);
+            memcpy(data2, buf + 4 + sizeof(int) + size_of_size_t, data2_len);
+
             rpc_data *data = malloc(sizeof(rpc_data));
             data->data1 = data1;
             data->data2_len = data2_len;
@@ -302,7 +301,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     if (type == 3) {
         // Decode the data1
-        int *data1_ptr = (int *) (buf + 3);
+        uint *data1_ptr = (int *) (buf + 3);
         int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
                         (data1_ptr[1] << 8) | (data1_ptr[0]);
 
@@ -493,14 +492,4 @@ int open_clientfd(char *hostname, char *port) {
         return -1;
     else
         return clientfd;
-}
-
-// Reverse the bytes in a size_t variable
-size_t reverse_bytes(size_t num) {
-    size_t result = 0;
-    for (int i = 0; i < sizeof(size_t); i++) {
-        result = (result << 8) + (num & 0xff);
-        num >>= 8;
-    }
-    return result;
 }
