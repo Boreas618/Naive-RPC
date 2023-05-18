@@ -88,11 +88,6 @@ rpc_data *lets_add2_i8(rpc_data *in) {
 }
 
 rpc_data *echo2(rpc_data *in) {
-    /* Check data2 */
-    if (in->data2 == NULL || in->data2_len != 1) {
-        return NULL;
-    }
-
     /* Parse request */
     int n1 = in->data1;
     void* n2 = in->data2;

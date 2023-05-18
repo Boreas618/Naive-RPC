@@ -26,7 +26,7 @@ struct rpc_server {
     int socket_fd;
     int client_fd;
     int port;
-    char* names[10];
+    char *names[10];
     rpc_handler handlers[10];
     int count_registered;
 };
@@ -46,7 +46,6 @@ rpc_server *rpc_init_server(int port) {
         perror("create_listening_socket");
         exit(EXIT_FAILURE);
     }
-
 
     srv->socket_fd = socket_fd;
     srv->client_fd = -1;
@@ -81,7 +80,6 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
     return 0;
 }
 
-
 void rpc_serve_all(rpc_server *srv) {
     // If the server is NULL, return
     if (srv == NULL) {
@@ -101,18 +99,12 @@ void rpc_serve_all(rpc_server *srv) {
         exit(EXIT_FAILURE);
     }
 
+    int n = 0;
+    int8_t buf[100050];
     // Keep processing the find and call requests
-    while (1) {
+    while ((n = read(srv->client_fd, buf, sizeof(buf))) >= 0) {
         // Receive the buffer from the client
         // The size is the maximum size of a possible buffer
-        int8_t buf[100050];
-
-        // Read the buffer from the client
-        int n = 0;
-        if ((n = read(srv->client_fd, buf, sizeof(buf))) < 0) {
-            perror("recv");
-            return;
-        }
 
         // Decode the buffer
         int8_t type = buf[1];
@@ -156,7 +148,7 @@ void rpc_serve_all(rpc_server *srv) {
 
             // Decode the length of data2
             int size_of_size_t = buf[2];
-            size_t *data2_len_ptr = (size_t *) (buf + 4 + sizeof(int));
+            size_t *data2_len_ptr = (size_t *)(buf + 4 + sizeof(int));
             size_t data2_len = *data2_len_ptr;
 
             // Decode data2
@@ -301,15 +293,18 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     if (type == 3) {
         // Decode the data1
-        uint *data1_ptr = (int *) (buf + 3);
+        uint *data1_ptr = (int *)(buf + 3);
         int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
-                        (data1_ptr[1] << 8) | (data1_ptr[0]);
+                    (data1_ptr[1] << 8) | (data1_ptr[0]);
 
-        // Decode the length of data2
-        size_t data2_len = 0;
+        int size_of_size_t = buf[2];
+        size_t *data2_len_ptr = (size_t *)(buf + 3 + sizeof(int));
+        size_t data2_len = *data2_len_ptr;
 
         // Decode data2
-        void *data2 = NULL;
+        void *data2;
+        data2 = malloc(data2_len);
+        memcpy(data2, buf + 3 + sizeof(int) + size_of_size_t, data2_len);
 
         rpc_data *data = malloc(sizeof(rpc_data));
 
@@ -417,7 +412,7 @@ void encode_data_call_response(rpc_data *data, int8_t *buf) {
     count_bytes += sizeof(int);
     memcpy(buf + count_bytes, &data->data2_len, sizeof(size_t));
     count_bytes += sizeof(size_t);
-    memcpy(buf + count_bytes, &(data->data2), data->data2_len);
+    memcpy(buf + count_bytes, data->data2, data->data2_len);
     count_bytes += data->data2_len;
     buf[0] = count_bytes;
 }
