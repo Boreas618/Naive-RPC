@@ -293,7 +293,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     if (type == 3) {
         // Decode the data1
-        uint *data1_ptr = (int *)(buf + 3);
+        uint8_t *data1_ptr = (int *)(buf + 3);
         int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
                     (data1_ptr[1] << 8) | (data1_ptr[0]);
 
