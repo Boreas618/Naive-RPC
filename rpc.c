@@ -71,6 +71,12 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
     // Copy the name to name_copy
     strcpy(name_copy, name);
 
+    for(int i = 0; i < srv->count_registered; i++) {
+        if(strcmp(srv->names[i], name_copy) == 0) {
+            srv->handlers[i] = handler;
+            return 0;
+        }
+    }
     // register the name and handler
     srv->names[srv->count_registered] = name_copy;
     srv->handlers[srv->count_registered] = handler;
