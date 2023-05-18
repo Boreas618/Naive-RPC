@@ -303,8 +303,12 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
         // Decode data2
         void *data2;
-        data2 = malloc(data2_len);
-        memcpy(data2, buf + 3 + sizeof(int) + size_of_size_t, data2_len);
+        if(data2_len == 0) {
+            data2 = NULL;
+        } else {
+            data2 = malloc(data2_len);
+            memcpy(data2, buf + 3 + sizeof(int) + size_of_size_t, data2_len);
+        }
 
         rpc_data *data = malloc(sizeof(rpc_data));
 
