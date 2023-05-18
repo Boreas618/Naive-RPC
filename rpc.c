@@ -142,7 +142,7 @@ void rpc_serve_all(rpc_server *srv) {
             // Call request
             int8_t index = buf[3];
             // Decode the data1
-            uint8_t *data1_ptr = buf + 4;
+            uint8_t *data1_ptr = (uint8_t *)(buf + 4);
             int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
                         (data1_ptr[1] << 8) | (data1_ptr[0]);
 
@@ -293,7 +293,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     if (type == 3) {
         // Decode the data1
-        uint8_t *data1_ptr = (int *)(buf + 3);
+        uint8_t *data1_ptr = (uint8_t *)(buf + 3);
         int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
                     (data1_ptr[1] << 8) | (data1_ptr[0]);
 

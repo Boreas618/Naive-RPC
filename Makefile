@@ -14,3 +14,6 @@ $(RPC_SYSTEM): rpc.c rpc.h
 
 format:
 	clang-format -style=file -i *.c *.h
+
+clean:
+	rm -f *.o *.a
