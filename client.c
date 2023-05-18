@@ -33,8 +33,16 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
     
+    printf("%d\n", response_data->data1);
+    //printf("%d", ((char *)response_data->data2)[0]);
+
+    left_operand = -127;
+    request_data.data1 = -127;
+    response_data = rpc_call(state, handle_echo2, &request_data);
+
     printf("%d", response_data->data1);
-    printf("%d", ((char *)response_data->data2)[0]);
+    //printf("%d", ((char *)response_data->data2)[0]);
+
     rpc_data_free(response_data);
 
 cleanup:

@@ -58,21 +58,21 @@ rpc_server *rpc_init_server(int port) {
 int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
     // Verify the name is not already registered
     if (verify_name(name) == -1) {
-        return -1;
+        perror("verify_name");
     }
 
     // Allocate memory for name_copy
     char *name_copy = malloc(strlen(name) + 1);
     if (name_copy == NULL) {
         // Failed to allocate memory
-        return -1;
+        perror("malloc");
     }
 
     // Copy the name to name_copy
     strcpy(name_copy, name);
 
-    for(int i = 0; i < srv->count_registered; i++) {
-        if(strcmp(srv->names[i], name_copy) == 0) {
+    for (int i = 0; i < srv->count_registered; i++) {
+        if (strcmp(srv->names[i], name_copy) == 0) {
             srv->handlers[i] = handler;
             return 0;
         }
@@ -89,7 +89,7 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
 void rpc_serve_all(rpc_server *srv) {
     // If the server is NULL, return
     if (srv == NULL) {
-        return;
+        perror("cannot find server instance");
     }
 
     // Listen on socket
@@ -105,82 +105,89 @@ void rpc_serve_all(rpc_server *srv) {
         exit(EXIT_FAILURE);
     }
 
-    int n = 0;
-    int8_t buf[100050];
-    // Keep processing the find and call requests
-    while ((n = read(srv->client_fd, buf, sizeof(buf))) >= 0) {
-        // Receive the buffer from the client
-        // The size is the maximum size of a possible buffer
+    while (1) {
+        int n = 0;
+        int8_t buf[100050];
+        // Keep processing the find and call requests
+        while ((n = read(srv->client_fd, buf, sizeof(buf))) >= 0) {
+            // Receive the buffer from the client
+            // The size is the maximum size of a possible buffer
 
-        // Decode the buffer
-        int8_t type = buf[1];
-        if (type == 0) {
-            // Find request
-            char name[1000];
-            memcpy(name, buf + 2, buf[0] - 2);
-            name[buf[0] - 2] = '\0';
+            // Decode the buffer
+            int8_t type = buf[1];
+            if (type == 0) {
+                // Find request
+                char name[1000];
+                memcpy(name, buf + 2, buf[0] - 2);
+                name[buf[0] - 2] = '\0';
 
-            int index_of_handler = -1;
-            for (int i = 0; i < srv->count_registered; i++) {
-                if (strcmp(srv->names[i], name) == 0) {
-                    index_of_handler = i;
-                    break;
+                int index_of_handler = -1;
+                for (int i = 0; i < srv->count_registered; i++) {
+                    if (strcmp(srv->names[i], name) == 0) {
+                        index_of_handler = i;
+                        break;
+                    }
                 }
-            }
 
-            if (index_of_handler == -1) {
-                // If the handle is invalid, send -1 to the client
-                encode_data_handle(-1, buf);
-                if ((n = write(srv->client_fd, buf, 3)) < 0) {
-                    perror("send");
-                    return;
+                if (index_of_handler == -1) {
+                    // If the handle is invalid, send -1 to the client
+                    encode_data_handle(-1, buf);
+                    if ((n = write(srv->client_fd, buf, 3)) < 0) {
+                        perror("send");
+                        return;
+                    }
+                } else {
+                    // Else, send the encoded handle to the client
+                    encode_data_handle(index_of_handler, buf);
+                    if ((n = write(srv->client_fd, buf, 3)) < 0) {
+                        perror("send");
+                        return;
+                    }
+                }
+
+            } else if (type == 1) {
+                // Call request
+                int8_t index = buf[3];
+                // Decode the data1
+                uint8_t *data1_ptr = (uint8_t *)(buf + 4);
+                int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
+                            (data1_ptr[1] << 8) | (data1_ptr[0]);
+
+                // Decode the length of data2
+                int size_of_size_t = buf[2];
+                size_t *data2_len_ptr = (size_t *)(buf + 4 + sizeof(int));
+                size_t data2_len = *data2_len_ptr;
+
+                // Decode data2
+                void *data2;
+                data2 = malloc(data2_len);
+                memcpy(data2, buf + 4 + sizeof(int) + size_of_size_t,
+                       data2_len);
+
+                rpc_data *data = malloc(sizeof(rpc_data));
+                data->data1 = data1;
+                data->data2_len = data2_len;
+                data->data2 = data2;
+
+                // Call the handler
+                rpc_data *outcome = srv->handlers[index](data);
+                if (outcome == NULL) {
+                    perror("rpc_call");
+                } else {
+                    // Send the response to the client
+                    encode_data_call_response(outcome, buf);
+                    if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
+                        perror("send");
+                        return;
+                    }
                 }
             } else {
-                // Else, send the encoded handle to the client
-                encode_data_handle(index_of_handler, buf);
-                if ((n = write(srv->client_fd, buf, 3)) < 0) {
-                    perror("send");
-                    return;
-                }
+                // Invalid request
+                return;
             }
-
-        } else if (type == 1) {
-            // Call request
-            int8_t index = buf[3];
-            // Decode the data1
-            uint8_t *data1_ptr = (uint8_t *)(buf + 4);
-            int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
-                        (data1_ptr[1] << 8) | (data1_ptr[0]);
-
-            // Decode the length of data2
-            int size_of_size_t = buf[2];
-            size_t *data2_len_ptr = (size_t *)(buf + 4 + sizeof(int));
-            size_t data2_len = *data2_len_ptr;
-
-            // Decode data2
-            void *data2;
-            data2 = malloc(data2_len);
-            memcpy(data2, buf + 4 + sizeof(int) + size_of_size_t, data2_len);
-
-            rpc_data *data = malloc(sizeof(rpc_data));
-            data->data1 = data1;
-            data->data2_len = data2_len;
-            data->data2 = data2;
-
-            // Call the handler
-            rpc_data *outcome = srv->handlers[index](data);
-            if (outcome == NULL) {
-                perror("rpc_call");
-            } else {
-                // Send the response to the client
-                encode_data_call_response(outcome, buf);
-                if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
-                    perror("send");
-                    return;
-                }
-            }
-        } else {
-            // Invalid request
+        }
+        if (n < 0) {
+            perror("read");
             return;
         }
     }
@@ -309,7 +316,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
         // Decode data2
         void *data2;
-        if(data2_len == 0) {
+        if (data2_len == 0) {
             data2 = NULL;
         } else {
             data2 = malloc(data2_len);
@@ -317,6 +324,10 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         }
 
         rpc_data *data = malloc(sizeof(rpc_data));
+        if(data == NULL) {
+            perror("malloc");
+            return NULL;
+        }
 
         data->data1 = data1;
         data->data2_len = data2_len;
@@ -328,7 +339,13 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     return NULL;
 }
 
-void rpc_close_client(rpc_client *cl) {}
+void rpc_close_client(rpc_client *cl) {
+    if (cl == NULL) {
+        return;
+    }
+    close(cl->socket_fd);
+    free(cl);
+}
 
 void rpc_data_free(rpc_data *data) {
     if (data == NULL) {
