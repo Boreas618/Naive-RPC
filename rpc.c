@@ -44,7 +44,7 @@ rpc_server *rpc_init_server(int port) {
     socket_fd = create_listening_socket(port);
     if (socket_fd == -1) {
         perror("create_listening_socket");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
     srv->socket_fd = socket_fd;
@@ -56,9 +56,15 @@ rpc_server *rpc_init_server(int port) {
 }
 
 int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
+    // If any argument is NULL, return -1
+    if (srv == NULL || name == NULL || handler == NULL) {
+        return -1;
+    }
+
     // Verify the name is not already registered
     if (verify_name(name) == -1) {
-        perror("verify_name");
+        perror("illegal name");
+        return -1;
     }
 
     // Allocate memory for name_copy
@@ -66,6 +72,7 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
     if (name_copy == NULL) {
         // Failed to allocate memory
         perror("malloc");
+        return -1;
     }
 
     // Copy the name to name_copy
@@ -90,6 +97,7 @@ void rpc_serve_all(rpc_server *srv) {
     // If the server is NULL, return
     if (srv == NULL) {
         perror("cannot find server instance");
+        return;
     }
 
     // Listen on socket
@@ -212,14 +220,14 @@ rpc_client *rpc_init_client(char *addr, int port) {
     socket_fd = open_clientfd(addr, port_str);
     if (socket_fd == -1) {
         perror("create_client_socket");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
     // Convert the addr into a sockaddr_in
     struct sockaddr_in addr_in;
     if (inet_pton(AF_INET6, addr, &addr_in.sin_addr) <= 0) {
         perror("inet_pton");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     addr_in.sin_family = AF_INET6;
     addr_in.sin_port = htons(port);
@@ -459,27 +467,27 @@ int create_listening_socket(int port_num) {
     s = getaddrinfo(NULL, service, &hints, &res);
     if (s != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     // Create socket
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (sockfd < 0) {
         perror("socket");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     // Reuse port if possible
     re = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &re, sizeof(int)) < 0) {
         perror("setsockopt");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     // Bind address to the socket
     if (bind(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
         perror("bind");
-        exit(EXIT_FAILURE);
+        return -1;
     }
     freeaddrinfo(res);
 
