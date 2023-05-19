@@ -171,7 +171,7 @@ void rpc_serve_all(rpc_server *srv) {
 
                 // Decode data2
                 void *data2;
-                if(buf + 4 + 8 + size_of_size_t == buf[0] || data2_len == 0) {
+                if((int8_t)(4 + 8 + size_of_size_t) == buf[0] || data2_len == 0) {
                     data2 = NULL;
                 } else {
                     data2 = malloc(data2_len);
