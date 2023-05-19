@@ -195,10 +195,10 @@ void rpc_serve_all(rpc_server *srv) {
                 data->data2 = data2;
 
                 rpc_data *outcome = srv->handlers[index](data);
-                /*if (inconsistency_check(outcome) == -1) {
+                if (inconsistency_check(outcome) == -1) {
                     perror("inconsistency deteced");
                     inconsistency_flag = 1;
-                }*/
+                }
 
                 if (inconsistency_flag == 1) {
                     outcome = NULL;
@@ -613,6 +613,9 @@ uint64_t my_htonll(uint64_t value) {
 }
 
 int inconsistency_check(rpc_data *data) {
+    if (data == NULL) {
+        return -1;
+    }
     if (data->data2_len < 0) {
         return -1;
     }
