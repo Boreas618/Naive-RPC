@@ -65,12 +65,6 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
         return -1;
     }
 
-    // Verify the name is not already registered
-    if (verify_name(name) == -1) {
-        perror("illegal name");
-        return -1;
-    }
-
     // Allocate memory for name_copy
     char *name_copy = malloc(strlen(name) + 1);
     if (name_copy == NULL) {
@@ -82,12 +76,19 @@ int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
     // Copy the name to name_copy
     strcpy(name_copy, name);
 
+    // Verify the name is not already registered
+    if (verify_name(name_copy) == -1) {
+        perror("illegal name");
+        return -1;
+    }
+
     for (int i = 0; i < srv->count_registered; i++) {
         if (strcmp(srv->names[i], name_copy) == 0) {
             srv->handlers[i] = handler;
             return 0;
         }
     }
+
     // register the name and handler
     srv->names[srv->count_registered] = name_copy;
     srv->handlers[srv->count_registered] = handler;
@@ -273,6 +274,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
     // If the handle is invalid, return NULL
     if (index == -1) {
+        perror("handler not found");
         return NULL;
     }
 
