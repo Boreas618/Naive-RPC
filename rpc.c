@@ -183,7 +183,7 @@ void rpc_serve_all(rpc_server *srv) {
                 }
                 else{
                     data2 = malloc(data2_len);
-                    memcpy(data2, buf + 4 + 8 + size_of_size_t, data2_len);
+                    memcpy(data2, buf + 4 + 8 + size_of_size_t, buf[0] - (int8_t)(4 + 8 + size_of_size_t));
                 }
 
                 rpc_data *data = malloc(sizeof(rpc_data));
