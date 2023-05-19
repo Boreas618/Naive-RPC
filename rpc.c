@@ -340,6 +340,16 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         } else {
             data2 = malloc(data2_len);
             memcpy(data2, buf + 3 + 8 + size_of_size_t, data2_len);
+            
+            // Check if the data2 is null, if the data2 is null, return an error
+            for(int i = 0; i < data2_len; i++) {
+                if(*((int8_t *)(data2 + i)) == 0) {
+                    continue;
+                } else {
+                    perror("inconsistent data2");
+                    return NULL;
+                }
+            }
         }
 
         rpc_data *data = malloc(sizeof(rpc_data));
@@ -541,8 +551,10 @@ int open_clientfd(char *hostname, char *port) {
 }
 
 uint64_t my_ntohll(uint64_t value) {
-    int num = 42;
-    if (*(char *)&num == 42) {
+    // Check the lowest byte of the int
+    // If it is 100, then the machine is little endian
+    int num = 100;
+    if (*(int8_t *)&num == 100) {
         return (((value) & 0xff00000000000000ull) >> 56) |
                (((value) & 0x00ff000000000000ull) >> 40) |
                (((value) & 0x0000ff0000000000ull) >> 24) |
@@ -557,8 +569,8 @@ uint64_t my_ntohll(uint64_t value) {
 }
 
 uint64_t my_htonll(uint64_t value) {
-    int num = 42;
-    if (*(char *)&num == 42) {
+    int num = 100;
+    if (*(int8_t *)&num == 100) {
         return (((value) & 0xff00000000000000ull) >> 56) |
                (((value) & 0x00ff000000000000ull) >> 40) |
                (((value) & 0x0000ff0000000000ull) >> 24) |
