@@ -180,14 +180,9 @@ void rpc_serve_all(rpc_server *srv) {
 
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
-                if (outcome == NULL) {
-                    perror("server: handler returned NULL");
-                } else {
-                    // Send the response to the client
-                    encode_data_call_response(outcome, buf);
-                    if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
-                        perror("send");
-                    }
+                encode_data_call_response(outcome, buf);
+                if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
+                    perror("send");
                 }
             } else {
                 // Invalid request
@@ -340,18 +335,6 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         } else {
             data2 = malloc(data2_len);
             memcpy(data2, buf + 3 + 8 + size_of_size_t, data2_len);
-            
-            // Check if the data2 is null, if the data2 is null, return an error
-            int is_null = 0;
-            for(int i = 0; i < data2_len; i++) {
-                if(*((int8_t *)(data2 + i)) != 0) {
-                    is_null = 1;
-                }
-            }
-            if(is_null == 0) {
-                perror("null data2 with non-zero data2_len");
-                return NULL;
-            }
         }
 
         rpc_data *data = malloc(sizeof(rpc_data));
@@ -365,6 +348,9 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         data->data2 = data2;
 
         return data;
+    } else if(type == 4) {
+        perror("Null response");
+        return NULL;
     }
 
     perror("call failed");
@@ -465,6 +451,11 @@ void encode_data_call_response(rpc_data *data, int8_t *buf) {
     // response The forth byte of the buffer is the data1 The next
     // sizeof(size_t) bytes are the length of the data2 The remaining bytes are
     // the data2
+    if(data == NULL) {
+        buf[0] = 2;
+        buf[1] = 4;
+        return;
+    }
     int count_bytes = 0;
     buf[1] = 3;
     buf[2] = sizeof(size_t);

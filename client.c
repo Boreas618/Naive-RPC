@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Prepare request */
-    char left_operand = 127;
+    char* left_operand = "nmsl";
     rpc_data request_data = {
         .data1 = 127, .data2_len = 1, .data2 = &left_operand};
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     printf("%d\n", response_data->data1);
     //printf("%d", ((char *)response_data->data2)[0]);
 
-    left_operand = -127;
+    left_operand = "hhh";
     request_data.data1 = -127;
     response_data = rpc_call(state, handle_echo2, &request_data);
 
