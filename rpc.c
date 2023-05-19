@@ -192,10 +192,10 @@ void rpc_serve_all(rpc_server *srv) {
                 data->data2 = data2;
                 
 
-                if (inconsistency_check(data) == -1) {
+                /*if (inconsistency_check(data) == -1) {
                     perror("inconsistency detected");
                     inconsistency_flag = 1;
-                }
+                }*/
 
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
