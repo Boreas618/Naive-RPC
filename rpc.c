@@ -58,6 +58,7 @@ rpc_server *rpc_init_server(int port) {
 int rpc_register(rpc_server *srv, char *name, rpc_handler handler) {
     // If any argument is NULL, return -1
     if (srv == NULL || name == NULL || handler == NULL) {
+        perror("invalid argument");
         return -1;
     }
 
@@ -178,7 +179,7 @@ void rpc_serve_all(rpc_server *srv) {
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
                 if (outcome == NULL) {
-                    perror("rpc_call");
+                    perror("server: handler returned NULL");
                 } else {
                     // Send the response to the client
                     encode_data_call_response(outcome, buf);
@@ -242,6 +243,7 @@ rpc_client *rpc_init_client(char *addr, int port) {
 rpc_handle *rpc_find(rpc_client *cl, char *name) {
     // If either argument is NULL, return NULL
     if (cl == NULL || name == NULL) {
+        perror("invalid argument");
         return NULL;
     }
 
@@ -283,14 +285,17 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     // If any argument is NULL, return NULL
     if (cl == NULL || h == NULL || payload == NULL) {
+        perror("invalid argument");
         return NULL;
     }
 
     if (h->index < 0) {
+        perror("invalid handle");
         return NULL;
     }
 
     if (payload->data2_len >= 100000 || payload->data2_len < 0) {
+        perror("invalid data2_len");
         return NULL;
     }
 
@@ -349,6 +354,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return data;
     }
 
+    perror("call failed");
     return NULL;
 }
 
