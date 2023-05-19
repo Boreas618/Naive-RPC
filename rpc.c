@@ -195,10 +195,10 @@ void rpc_serve_all(rpc_server *srv) {
                 data->data2 = data2;
 
                 rpc_data *outcome = srv->handlers[index](data);
-                if (inconsistency_check(outcome) == -1) {
+                /*if (inconsistency_check(outcome) == -1) {
                     perror("inconsistency deteced");
                     inconsistency_flag = 1;
-                }
+                }*/
 
                 if (inconsistency_flag == 1) {
                     outcome = NULL;
