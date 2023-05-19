@@ -173,21 +173,9 @@ void rpc_serve_all(rpc_server *srv) {
 
                 // Decode data2
                 void *data2;
-                if ((int8_t)(4 + 8 + size_of_size_t) == buf[0] &&
-                    data2_len == 0) {
-                    data2 = NULL;
-                } else if ((int8_t)(4 + 8 + size_of_size_t) != buf[0] &&
-                           data2_len == 0) {
-                    perror("inconsistency detected");
-                    inconsistency_flag = 1;
-                    data2 = malloc(buf[0] - (int8_t)(4 + 8 + size_of_size_t));
-                    memcpy(data2, buf + 4 + 8 + size_of_size_t,
+                data2 = malloc(data2_len);
+                memcpy(data2, buf + 4 + 8 + size_of_size_t,
                            buf[0] - (int8_t)(4 + 8 + size_of_size_t));
-                } else {
-                    data2 = malloc(data2_len);
-                    memcpy(data2, buf + 4 + 8 + size_of_size_t,
-                           buf[0] - (int8_t)(4 + 8 + size_of_size_t));
-                }
 
                 rpc_data *data = malloc(sizeof(rpc_data));
                 data->data1 = data1;
@@ -197,10 +185,6 @@ void rpc_serve_all(rpc_server *srv) {
                 rpc_data *outcome = srv->handlers[index](data);
                 if (inconsistency_check(outcome) == -1) {
                     perror("inconsistency deteced");
-                    inconsistency_flag = 1;
-                }
-
-                if (inconsistency_flag == 1) {
                     outcome = NULL;
                 }
 
