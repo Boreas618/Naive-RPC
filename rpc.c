@@ -602,5 +602,10 @@ int inconsistency_check(rpc_data* data) {
     if(data->data2_len != 0 && data->data2 == NULL) {
         return -1;
     }
+
+    if(data->data2_len == 0 && data->data2 != NULL) {
+        return -1;
+    }
+    
     return 0;
 }
