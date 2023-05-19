@@ -19,6 +19,7 @@ int open_clientfd(char *hostname, char *port);
 uint64_t my_ntohll(uint64_t value);
 uint64_t my_htonll(uint64_t value);
 int inconsistency_check(rpc_data *data);
+void handle_find_request(rpc_server *srv, int8_t *buf);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
