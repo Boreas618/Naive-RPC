@@ -18,6 +18,7 @@ int create_listening_socket(int port_num);
 int open_clientfd(char *hostname, char *port);
 uint64_t my_ntohll(uint64_t value);
 uint64_t my_htonll(uint64_t value);
+int inconsistency_check(rpc_data* data);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
@@ -177,9 +178,18 @@ void rpc_serve_all(rpc_server *srv) {
                 data->data1 = data1;
                 data->data2_len = data2_len;
                 data->data2 = data2;
+                if(inconsistency_check(data) == -1) {
+                    perror("inconsistency");
+                    return;
+                }
 
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
+                if(inconsistency_check(outcome) == -1) {
+                    perror("inconsistency");
+                    return;
+                }
+
                 encode_data_call_response(outcome, buf);
                 if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
                     perror("send");
@@ -295,6 +305,11 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     }
 
+    if(inconsistency_check(payload) == -1) {
+        perror("inconsistency");
+        return NULL;
+    }
+
     // Encode the call request into a sendable buffer
     int8_t buf[100050];
     encode_data_call(h->index, payload, buf);
@@ -346,6 +361,11 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         data->data1 = data1;
         data->data2_len = data2_len;
         data->data2 = data2;
+
+        if(inconsistency_check(data) == -1) {
+            perror("inconsistency");
+            return NULL;
+        }
 
         return data;
     } else if(type == 4) {
@@ -575,4 +595,12 @@ uint64_t my_htonll(uint64_t value) {
     } else {
         return value;
     }
+}
+
+int inconsistency_check(rpc_data* data) {
+    // length not matching up with NULL data2
+    if(data->data2_len != 0 && data->data2 == NULL) {
+        return -1;
+    }
+    return 0;
 }
