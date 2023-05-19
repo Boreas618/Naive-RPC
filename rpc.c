@@ -187,7 +187,7 @@ void rpc_serve_all(rpc_server *srv) {
                 rpc_data *outcome = srv->handlers[index](data);
                 if (inconsistency_check(outcome) == -1) {
                     perror("inconsistency");
-                    return;
+                    outcome = NULL;
                 }
 
                 encode_data_call_response(outcome, buf);
@@ -370,7 +370,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
         return data;
     } else if (type == 4) {
-        perror("Null response");
+        perror("Invalid outcome from the server side");
         return NULL;
     }
 
