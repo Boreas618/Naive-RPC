@@ -29,8 +29,8 @@ struct rpc_server {
     int socket_fd;
     int client_fd;
     int port;
-    char *names[10];
-    rpc_handler handlers[10];
+    char *names[12];
+    rpc_handler handlers[12];
     int count_registered;
 };
 
