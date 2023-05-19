@@ -18,7 +18,7 @@ int create_listening_socket(int port_num);
 int open_clientfd(char *hostname, char *port);
 uint64_t my_ntohll(uint64_t value);
 uint64_t my_htonll(uint64_t value);
-int inconsistency_check(rpc_data* data);
+int inconsistency_check(rpc_data *data);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
@@ -141,23 +141,23 @@ void rpc_serve_all(rpc_server *srv) {
                     }
                 }
 
-                if (index_of_handler == -1) {
-                    // If the handle is invalid, send -1 to the client
-                    encode_data_handle(-1, buf);
-                    if ((n = write(srv->client_fd, buf, 3)) < 0) {
-                        perror("send");
-                    }
-                } else {
-                    // Else, send the encoded handle to the client
-                    encode_data_handle(index_of_handler, buf);
-                    if ((n = write(srv->client_fd, buf, 3)) < 0) {
-                        perror("send");
-                    }
+                encode_data_handle(index_of_handler, buf);
+                if ((n = write(srv->client_fd, buf, 3)) < 0) {
+                    perror("send");
                 }
 
             } else if (type == 1) {
                 // Call request
                 int8_t index = buf[3];
+                
+                if(index == -1) {
+                    encode_data_call_response(NULL, buf);
+                    if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
+                        perror("send");
+                    }
+                    continue;
+                }
+
                 // Decode the data1
                 uint64_t *data1_ptr = (uint64_t *)(buf + 4);
                 int64_t data1_extended = (int64_t)my_ntohll(*data1_ptr);
@@ -171,21 +171,20 @@ void rpc_serve_all(rpc_server *srv) {
                 // Decode data2
                 void *data2;
                 data2 = malloc(data2_len);
-                memcpy(data2, buf + 4 + 8 + size_of_size_t,
-                       data2_len);
+                memcpy(data2, buf + 4 + 8 + size_of_size_t, data2_len);
 
                 rpc_data *data = malloc(sizeof(rpc_data));
                 data->data1 = data1;
                 data->data2_len = data2_len;
                 data->data2 = data2;
-                if(inconsistency_check(data) == -1) {
+                if (inconsistency_check(data) == -1) {
                     perror("inconsistency");
                     return;
                 }
 
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
-                if(inconsistency_check(outcome) == -1) {
+                if (inconsistency_check(outcome) == -1) {
                     perror("inconsistency");
                     return;
                 }
@@ -305,7 +304,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     }
 
-    if(inconsistency_check(payload) == -1) {
+    if (inconsistency_check(payload) == -1) {
         perror("inconsistency");
         return NULL;
     }
@@ -353,7 +352,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         }
 
         rpc_data *data = malloc(sizeof(rpc_data));
-        if(data == NULL) {
+        if (data == NULL) {
             perror("malloc");
             return NULL;
         }
@@ -362,13 +361,13 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         data->data2_len = data2_len;
         data->data2 = data2;
 
-        if(inconsistency_check(data) == -1) {
+        if (inconsistency_check(data) == -1) {
             perror("inconsistency");
             return NULL;
         }
 
         return data;
-    } else if(type == 4) {
+    } else if (type == 4) {
         perror("Null response");
         return NULL;
     }
@@ -440,7 +439,7 @@ void encode_data_call(int index, rpc_data *data, int8_t *buf) {
     buf[2] = sizeof(size_t);
     buf[3] = index;
     count_bytes += 4;
-    int64_t data_1_extended = (int64_t) data->data1;
+    int64_t data_1_extended = (int64_t)data->data1;
     uint64_t data_1_extended_network_order = my_htonll(data_1_extended);
     memcpy(buf + count_bytes, &data_1_extended_network_order, 8);
     count_bytes += 8;
@@ -471,7 +470,7 @@ void encode_data_call_response(rpc_data *data, int8_t *buf) {
     // response The forth byte of the buffer is the data1 The next
     // sizeof(size_t) bytes are the length of the data2 The remaining bytes are
     // the data2
-    if(data == NULL) {
+    if (data == NULL) {
         buf[0] = 2;
         buf[1] = 4;
         return;
@@ -480,7 +479,7 @@ void encode_data_call_response(rpc_data *data, int8_t *buf) {
     buf[1] = 3;
     buf[2] = sizeof(size_t);
     count_bytes += 3;
-    int64_t data_1_extended = (int64_t) data->data1;
+    int64_t data_1_extended = (int64_t)data->data1;
     uint64_t data_1_extended_network_order = my_htonll(data_1_extended);
     memcpy(buf + count_bytes, &data_1_extended_network_order, 8);
     count_bytes += 8;
@@ -568,14 +567,14 @@ uint64_t my_ntohll(uint64_t value) {
     // If it is 100, then the machine is little endian
     int num = 100;
     if (*(int8_t *)&num == 100) {
-        return (((value) & 0xff00000000000000ull) >> 56) |
-               (((value) & 0x00ff000000000000ull) >> 40) |
-               (((value) & 0x0000ff0000000000ull) >> 24) |
-               (((value) & 0x000000ff00000000ull) >> 8) |
-               (((value) & 0x00000000ff000000ull) << 8) |
-               (((value) & 0x0000000000ff0000ull) << 24) |
-               (((value) & 0x000000000000ff00ull) << 40) |
-               (((value) & 0x00000000000000ffull) << 56);
+        return (((value)&0xff00000000000000ull) >> 56) |
+               (((value)&0x00ff000000000000ull) >> 40) |
+               (((value)&0x0000ff0000000000ull) >> 24) |
+               (((value)&0x000000ff00000000ull) >> 8) |
+               (((value)&0x00000000ff000000ull) << 8) |
+               (((value)&0x0000000000ff0000ull) << 24) |
+               (((value)&0x000000000000ff00ull) << 40) |
+               (((value)&0x00000000000000ffull) << 56);
     } else {
         return value;
     }
@@ -584,28 +583,28 @@ uint64_t my_ntohll(uint64_t value) {
 uint64_t my_htonll(uint64_t value) {
     int num = 100;
     if (*(int8_t *)&num == 100) {
-        return (((value) & 0xff00000000000000ull) >> 56) |
-               (((value) & 0x00ff000000000000ull) >> 40) |
-               (((value) & 0x0000ff0000000000ull) >> 24) |
-               (((value) & 0x000000ff00000000ull) >> 8) |
-               (((value) & 0x00000000ff000000ull) << 8) |
-               (((value) & 0x0000000000ff0000ull) << 24) |
-               (((value) & 0x000000000000ff00ull) << 40) |
-               (((value) & 0x00000000000000ffull) << 56);
+        return (((value)&0xff00000000000000ull) >> 56) |
+               (((value)&0x00ff000000000000ull) >> 40) |
+               (((value)&0x0000ff0000000000ull) >> 24) |
+               (((value)&0x000000ff00000000ull) >> 8) |
+               (((value)&0x00000000ff000000ull) << 8) |
+               (((value)&0x0000000000ff0000ull) << 24) |
+               (((value)&0x000000000000ff00ull) << 40) |
+               (((value)&0x00000000000000ffull) << 56);
     } else {
         return value;
     }
 }
 
-int inconsistency_check(rpc_data* data) {
+int inconsistency_check(rpc_data *data) {
     // length not matching up with NULL data2
-    if(data->data2_len != 0 && data->data2 == NULL) {
+    if (data->data2_len != 0 && data->data2 == NULL) {
         return -1;
     }
 
-    if(data->data2_len == 0 && data->data2 != NULL) {
+    if (data->data2_len == 0 && data->data2 != NULL) {
         return -1;
     }
-    
+
     return 0;
 }
