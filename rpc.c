@@ -194,17 +194,10 @@ void rpc_serve_all(rpc_server *srv) {
                 data->data2_len = data2_len;
                 data->data2 = data2;
 
-                rpc_data *outcome;
-                if (inconsistency_check(data) == -1) {
-                    perror("inconsistency detected");
+                rpc_data *outcome = srv->handlers[index](data);
+                if (inconsistency_check(outcome) == -1) {
+                    perror("inconsistency deteced");
                     inconsistency_flag = 1;
-                } else {
-                    // Call the handler
-                    outcome = srv->handlers[index](data);
-                    if (inconsistency_check(outcome) == -1) {
-                        perror("inconsistency deteced");
-                        inconsistency_flag = 1;
-                    }
                 }
 
                 if (inconsistency_flag == 1) {
