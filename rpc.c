@@ -178,6 +178,8 @@ void rpc_serve_all(rpc_server *srv) {
                 } else if((int8_t)(4 + 8 + size_of_size_t) != buf[0] && data2_len == 0){
                     perror("inconsistency detected");
                     inconsistency_flag = 1;
+                    data2 = malloc(buf[0] - (int8_t)(4 + 8 + size_of_size_t));
+                    memcpy(data2, buf + 4 + 8 + size_of_size_t, buf[0] - (int8_t)(4 + 8 + size_of_size_t));
                 }
                 else{
                     data2 = malloc(data2_len);
