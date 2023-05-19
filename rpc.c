@@ -150,8 +150,8 @@ void rpc_serve_all(rpc_server *srv) {
             } else if (type == 1) {
                 // Call request
                 int8_t index = buf[3];
-                
-                if(index == -1) {
+
+                if (index == -1) {
                     encode_data_call_response(NULL, buf);
                     if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
                         perror("send");
@@ -600,6 +600,9 @@ uint64_t my_htonll(uint64_t value) {
 
 int inconsistency_check(rpc_data *data) {
     // length not matching up with NULL data2
+    if (data->data2_len < 0) {
+        return -1;
+    }
     if (data->data2_len != 0 && data->data2 == NULL) {
         return -1;
     }
