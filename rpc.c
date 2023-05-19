@@ -588,7 +588,7 @@ void handle_call_request(rpc_server *srv, int8_t *buf) {
         if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
             perror("send");
         }
-        return NULL;
+        return;
     }
 
     // Decode the data1
