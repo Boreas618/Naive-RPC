@@ -294,8 +294,8 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     }
 
-    if (payload->data2_len >= 100000 || payload->data2_len < 0) {
-        perror("invalid data2_len");
+    if (payload->data2_len >= 100000) {
+        perror("Overlength error");
         return NULL;
     }
 
@@ -469,7 +469,7 @@ int create_listening_socket(int port_num) {
 
     // Create address we're going to listen on (with given port number)
     memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET6;      // IPv4
+    hints.ai_family = AF_INET6;      // IPv6
     hints.ai_socktype = SOCK_STREAM; // Connection-mode byte streams
     hints.ai_flags = AI_PASSIVE;     // for bind, listen, accept
 
