@@ -16,6 +16,8 @@ void encode_data_handle(int8_t index, int8_t *buf);
 void encode_data_call_response(rpc_data *data, int8_t *buf);
 int create_listening_socket(int port_num);
 int open_clientfd(char *hostname, char *port);
+uint64_t my_ntohll(uint64_t value);
+uint64_t my_htonll(uint64_t value);
 
 struct rpc_handle {
     /* Add variable(s) for handle */
@@ -157,7 +159,7 @@ void rpc_serve_all(rpc_server *srv) {
                 int8_t index = buf[3];
                 // Decode the data1
                 uint64_t *data1_ptr = (uint64_t *)(buf + 4);
-                int64_t data1_extended = (int64_t)ntohll(*data1_ptr);
+                int64_t data1_extended = (int64_t)my_ntohll(*data1_ptr);
                 int data1 = (int)data1_extended;
 
                 // Decode the length of data2
@@ -324,7 +326,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     if (type == 3) {
         // Decode the data1
         uint64_t *data1_ptr = (uint64_t *)(buf + 3);
-        int64_t data1_extended = (int64_t)ntohll(*data1_ptr);
+        int64_t data1_extended = (int64_t)my_ntohll(*data1_ptr);
         int data1 = (int)data1_extended;
 
         int size_of_size_t = buf[2];
@@ -421,7 +423,7 @@ void encode_data_call(int index, rpc_data *data, int8_t *buf) {
     buf[3] = index;
     count_bytes += 4;
     int64_t data_1_extended = (int64_t) data->data1;
-    uint64_t data_1_extended_network_order = htonll(data_1_extended);
+    uint64_t data_1_extended_network_order = my_htonll(data_1_extended);
     memcpy(buf + count_bytes, &data_1_extended_network_order, 8);
     count_bytes += 8;
     memcpy(buf + count_bytes, &data->data2_len, sizeof(size_t));
@@ -456,7 +458,7 @@ void encode_data_call_response(rpc_data *data, int8_t *buf) {
     buf[2] = sizeof(size_t);
     count_bytes += 3;
     int64_t data_1_extended = (int64_t) data->data1;
-    uint64_t data_1_extended_network_order = htonll(data_1_extended);
+    uint64_t data_1_extended_network_order = my_htonll(data_1_extended);
     memcpy(buf + count_bytes, &data_1_extended_network_order, 8);
     count_bytes += 8;
     memcpy(buf + count_bytes, &data->data2_len, sizeof(size_t));
@@ -536,4 +538,36 @@ int open_clientfd(char *hostname, char *port) {
         return -1;
     else
         return clientfd;
+}
+
+uint64_t my_ntohll(uint64_t value) {
+    int num = 42;
+    if (*(char *)&num == 42) {
+        return (((value) & 0xff00000000000000ull) >> 56) |
+               (((value) & 0x00ff000000000000ull) >> 40) |
+               (((value) & 0x0000ff0000000000ull) >> 24) |
+               (((value) & 0x000000ff00000000ull) >> 8) |
+               (((value) & 0x00000000ff000000ull) << 8) |
+               (((value) & 0x0000000000ff0000ull) << 24) |
+               (((value) & 0x000000000000ff00ull) << 40) |
+               (((value) & 0x00000000000000ffull) << 56);
+    } else {
+        return value;
+    }
+}
+
+uint64_t my_htonll(uint64_t value) {
+    int num = 42;
+    if (*(char *)&num == 42) {
+        return (((value) & 0xff00000000000000ull) >> 56) |
+               (((value) & 0x00ff000000000000ull) >> 40) |
+               (((value) & 0x0000ff0000000000ull) >> 24) |
+               (((value) & 0x000000ff00000000ull) >> 8) |
+               (((value) & 0x00000000ff000000ull) << 8) |
+               (((value) & 0x0000000000ff0000ull) << 24) |
+               (((value) & 0x000000000000ff00ull) << 40) |
+               (((value) & 0x00000000000000ffull) << 56);
+    } else {
+        return value;
+    }
 }
