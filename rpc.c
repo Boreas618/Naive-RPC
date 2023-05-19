@@ -130,23 +130,7 @@ void rpc_serve_all(rpc_server *srv) {
             int8_t type = buf[1];
             if (type == 0) {
                 // Find request
-                char name[1000];
-                memcpy(name, buf + 2, buf[0] - 2);
-                name[buf[0] - 2] = '\0';
-
-                int index_of_handler = -1;
-                for (int i = 0; i < srv->count_registered; i++) {
-                    if (strcmp(srv->names[i], name) == 0) {
-                        index_of_handler = i;
-                        break;
-                    }
-                }
-
-                encode_data_handle(index_of_handler, buf);
-                if ((n = write(srv->client_fd, buf, 3)) < 0) {
-                    perror("send");
-                }
-
+                handle_find_request(srv, buf);
             } else if (type == 1) {
                 // Call request
                 int8_t index = buf[3];
@@ -173,7 +157,7 @@ void rpc_serve_all(rpc_server *srv) {
                 void *data2;
                 data2 = malloc(data2_len);
                 memcpy(data2, buf + 4 + 8 + size_of_size_t,
-                           buf[0] - (int8_t)(4 + 8 + size_of_size_t));
+                       buf[0] - (int8_t)(4 + 8 + size_of_size_t));
 
                 rpc_data *data = malloc(sizeof(rpc_data));
                 data->data1 = data1;
@@ -611,4 +595,24 @@ int inconsistency_check(rpc_data *data) {
     }
 
     return 0;
+}
+
+void handle_find_request(rpc_server *srv, int8_t *buf) {
+    char name[1000];
+    memcpy(name, buf + 2, buf[0] - 2);
+    name[buf[0] - 2] = '\0';
+
+    int index_of_handler = -1;
+    for (int i = 0; i < srv->count_registered; i++) {
+        if (strcmp(srv->names[i], name) == 0) {
+            index_of_handler = i;
+            break;
+        }
+    }
+
+    encode_data_handle(index_of_handler, buf);
+    int n = 0;
+    if ((n = write(srv->client_fd, buf, 3)) < 0) {
+        perror("send");
+    }
 }
