@@ -156,19 +156,19 @@ void rpc_serve_all(rpc_server *srv) {
                 // Call request
                 int8_t index = buf[3];
                 // Decode the data1
-                uint8_t *data1_ptr = (uint8_t *)(buf + 4);
-                int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
-                            (data1_ptr[1] << 8) | (data1_ptr[0]);
+                uint64_t *data1_ptr = (uint64_t *)(buf + 4);
+                int64_t data1_extended = (int64_t)ntohll(*data1_ptr);
+                int data1 = (int)data1_extended;
 
                 // Decode the length of data2
                 int size_of_size_t = buf[2];
-                size_t *data2_len_ptr = (size_t *)(buf + 4 + sizeof(int));
+                size_t *data2_len_ptr = (size_t *)(buf + 4 + 8);
                 size_t data2_len = *data2_len_ptr;
 
                 // Decode data2
                 void *data2;
                 data2 = malloc(data2_len);
-                memcpy(data2, buf + 4 + sizeof(int) + size_of_size_t,
+                memcpy(data2, buf + 4 + 8 + size_of_size_t,
                        data2_len);
 
                 rpc_data *data = malloc(sizeof(rpc_data));
@@ -193,7 +193,6 @@ void rpc_serve_all(rpc_server *srv) {
             }
         }
         if (n < 0) {
-            perror("read");
             perror("client disconnected");
         }
     }
@@ -307,7 +306,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     // Send the request to the server
     if ((n = write(cl->socket_fd, buf,
-                   1 + 1 + 1 + 1 + 4 + sizeof(size_t) + payload->data2_len)) <
+                   1 + 1 + 1 + 1 + 8 + sizeof(size_t) + payload->data2_len)) <
         0) {
         perror("send");
         return NULL;
@@ -324,12 +323,12 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
 
     if (type == 3) {
         // Decode the data1
-        uint8_t *data1_ptr = (uint8_t *)(buf + 3);
-        int data1 = (data1_ptr[3] << 24) | (data1_ptr[2] << 16) |
-                    (data1_ptr[1] << 8) | (data1_ptr[0]);
+        uint64_t *data1_ptr = (uint64_t *)(buf + 3);
+        int64_t data1_extended = (int64_t)ntohll(*data1_ptr);
+        int data1 = (int)data1_extended;
 
         int size_of_size_t = buf[2];
-        size_t *data2_len_ptr = (size_t *)(buf + 3 + sizeof(int));
+        size_t *data2_len_ptr = (size_t *)(buf + 3 + 8);
         size_t data2_len = *data2_len_ptr;
 
         // Decode data2
@@ -338,7 +337,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
             data2 = NULL;
         } else {
             data2 = malloc(data2_len);
-            memcpy(data2, buf + 3 + sizeof(int) + size_of_size_t, data2_len);
+            memcpy(data2, buf + 3 + 8 + size_of_size_t, data2_len);
         }
 
         rpc_data *data = malloc(sizeof(rpc_data));
@@ -421,8 +420,10 @@ void encode_data_call(int index, rpc_data *data, int8_t *buf) {
     buf[2] = sizeof(size_t);
     buf[3] = index;
     count_bytes += 4;
-    memcpy(buf + count_bytes, &(data->data1), sizeof(int));
-    count_bytes += sizeof(int);
+    int64_t data_1_extended = (int64_t) data->data1;
+    uint64_t data_1_extended_network_order = htonll(data_1_extended);
+    memcpy(buf + count_bytes, &data_1_extended_network_order, 8);
+    count_bytes += 8;
     memcpy(buf + count_bytes, &data->data2_len, sizeof(size_t));
     count_bytes += sizeof(size_t);
     memcpy(buf + count_bytes, data->data2, data->data2_len);
@@ -454,8 +455,10 @@ void encode_data_call_response(rpc_data *data, int8_t *buf) {
     buf[1] = 3;
     buf[2] = sizeof(size_t);
     count_bytes += 3;
-    memcpy(buf + count_bytes, &(data->data1), sizeof(int));
-    count_bytes += sizeof(int);
+    int64_t data_1_extended = (int64_t) data->data1;
+    uint64_t data_1_extended_network_order = htonll(data_1_extended);
+    memcpy(buf + count_bytes, &data_1_extended_network_order, 8);
+    count_bytes += 8;
     memcpy(buf + count_bytes, &data->data2_len, sizeof(size_t));
     count_bytes += sizeof(size_t);
     memcpy(buf + count_bytes, data->data2, data->data2_len);
