@@ -151,7 +151,7 @@ void rpc_serve_all(rpc_server *srv) {
                 // Call request
                 int8_t index = buf[3];
 
-                if (index == -1) {
+                if (index < 0) {
                     encode_data_call_response(NULL, buf);
                     if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
                         perror("send");
@@ -171,8 +171,12 @@ void rpc_serve_all(rpc_server *srv) {
 
                 // Decode data2
                 void *data2;
-                data2 = malloc(data2_len);
-                memcpy(data2, buf + 4 + 8 + size_of_size_t, data2_len);
+                if(buf + 4 + 8 + size_of_size_t == buf[0] || data2_len == 0) {
+                    data2 = NULL;
+                } else {
+                    data2 = malloc(data2_len);
+                    memcpy(data2, buf + 4 + 8 + size_of_size_t, data2_len);
+                }
 
                 rpc_data *data = malloc(sizeof(rpc_data));
                 data->data1 = data1;
@@ -182,21 +186,21 @@ void rpc_serve_all(rpc_server *srv) {
                 int inconsistency_flag = 0;
 
                 if (inconsistency_check(data) == -1) {
-                    perror("inconsistency");
+                    perror("inconsistency detected");
                     inconsistency_flag = 1;
                 }
 
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
                 if (inconsistency_check(outcome) == -1) {
-                    perror("inconsistency");
+                    perror("inconsistency deteced");
                     inconsistency_flag = 1;
                 }
 
                 if(inconsistency_flag == 1) {
                     outcome = NULL;
                 }
-                
+
                 encode_data_call_response(outcome, buf);
                 if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
                     perror("send");
@@ -314,7 +318,7 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
     }
 
     if (inconsistency_check(payload) == -1) {
-        perror("inconsistency");
+        perror("inconsistency detected");
         return NULL;
     }
 
@@ -606,10 +610,10 @@ uint64_t my_htonll(uint64_t value) {
 }
 
 int inconsistency_check(rpc_data *data) {
-    // length not matching up with NULL data2
     if (data->data2_len < 0) {
         return -1;
     }
+
     if (data->data2_len != 0 && data->data2 == NULL) {
         return -1;
     }
