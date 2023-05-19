@@ -20,9 +20,9 @@ uint64_t my_ntohll(uint64_t value);
 uint64_t my_htonll(uint64_t value);
 int inconsistency_check(rpc_data *data);
 void handle_find_request(rpc_server *srv, int8_t *buf);
+void handle_call_request(rpc_server *srv, int8_t *buf);
 
 struct rpc_handle {
-    /* Add variable(s) for handle */
     int8_t index;
 };
 
@@ -134,47 +134,7 @@ void rpc_serve_all(rpc_server *srv) {
                 handle_find_request(srv, buf);
             } else if (type == 1) {
                 // Call request
-                int8_t index = buf[3];
-
-                if (index < 0) {
-                    encode_data_call_response(NULL, buf);
-                    if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
-                        perror("send");
-                    }
-                    continue;
-                }
-
-                // Decode the data1
-                uint64_t *data1_ptr = (uint64_t *)(buf + 4);
-                int64_t data1_extended = (int64_t)my_ntohll(*data1_ptr);
-                int data1 = (int)data1_extended;
-
-                // Decode the length of data2
-                int size_of_size_t = buf[2];
-                size_t *data2_len_ptr = (size_t *)(buf + 4 + 8);
-                size_t data2_len = *data2_len_ptr;
-
-                // Decode data2
-                void *data2;
-                data2 = malloc(data2_len);
-                memcpy(data2, buf + 4 + 8 + size_of_size_t,
-                       buf[0] - (int8_t)(4 + 8 + size_of_size_t));
-
-                rpc_data *data = malloc(sizeof(rpc_data));
-                data->data1 = data1;
-                data->data2_len = data2_len;
-                data->data2 = data2;
-
-                rpc_data *outcome = srv->handlers[index](data);
-                if (inconsistency_check(outcome) == -1) {
-                    perror("inconsistency deteced");
-                    outcome = NULL;
-                }
-
-                encode_data_call_response(outcome, buf);
-                if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
-                    perror("send");
-                }
+                handle_call_request(srv, buf);
             } else {
                 // Invalid request
                 perror("invalid request");
@@ -614,6 +574,52 @@ void handle_find_request(rpc_server *srv, int8_t *buf) {
     encode_data_handle(index_of_handler, buf);
     int n = 0;
     if ((n = write(srv->client_fd, buf, 3)) < 0) {
+        perror("send");
+    }
+}
+
+void handle_call_request(rpc_server *srv, int8_t *buf) {
+    int n = 0;
+
+    int8_t index = buf[3];
+
+    if (index < 0) {
+        encode_data_call_response(NULL, buf);
+        if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
+            perror("send");
+        }
+        return NULL;
+    }
+
+    // Decode the data1
+    uint64_t *data1_ptr = (uint64_t *)(buf + 4);
+    int64_t data1_extended = (int64_t)my_ntohll(*data1_ptr);
+    int data1 = (int)data1_extended;
+
+    // Decode the length of data2
+    int size_of_size_t = buf[2];
+    size_t *data2_len_ptr = (size_t *)(buf + 4 + 8);
+    size_t data2_len = *data2_len_ptr;
+
+    // Decode data2
+    void *data2;
+    data2 = malloc(data2_len);
+    memcpy(data2, buf + 4 + 8 + size_of_size_t,
+           buf[0] - (int8_t)(4 + 8 + size_of_size_t));
+
+    rpc_data *data = malloc(sizeof(rpc_data));
+    data->data1 = data1;
+    data->data2_len = data2_len;
+    data->data2 = data2;
+
+    rpc_data *outcome = srv->handlers[index](data);
+    if (inconsistency_check(outcome) == -1) {
+        perror("inconsistency deteced");
+        outcome = NULL;
+    }
+
+    encode_data_call_response(outcome, buf);
+    if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
         perror("send");
     }
 }
