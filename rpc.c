@@ -169,8 +169,6 @@ void rpc_serve_all(rpc_server *srv) {
                 size_t *data2_len_ptr = (size_t *)(buf + 4 + 8);
                 size_t data2_len = *data2_len_ptr;
 
-                int inconsistency_flag = 0;
-
                 // Decode data2
                 void *data2;
                 data2 = malloc(data2_len);
