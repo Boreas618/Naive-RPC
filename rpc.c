@@ -178,18 +178,25 @@ void rpc_serve_all(rpc_server *srv) {
                 data->data1 = data1;
                 data->data2_len = data2_len;
                 data->data2 = data2;
+                
+                int inconsistency_flag = 0;
+
                 if (inconsistency_check(data) == -1) {
                     perror("inconsistency");
-                    return;
+                    inconsistency_flag = 1;
                 }
 
                 // Call the handler
                 rpc_data *outcome = srv->handlers[index](data);
                 if (inconsistency_check(outcome) == -1) {
                     perror("inconsistency");
-                    outcome = NULL;
+                    inconsistency_flag = 1;
                 }
 
+                if(inconsistency_flag == 1) {
+                    outcome = NULL;
+                }
+                
                 encode_data_call_response(outcome, buf);
                 if ((n = write(srv->client_fd, buf, buf[0])) < 0) {
                     perror("send");
