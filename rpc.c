@@ -259,7 +259,7 @@ rpc_handle *rpc_find(rpc_client *cl, char *name) {
 
     int n = 0;
 
-    if ((n = write(cl->socket_fd, buf, sizeof(name) + 2)) < 0) {
+    if ((n = write(cl->socket_fd, buf, strlen(name) + 2)) < 0) {
         perror("send");
         return NULL;
     }
