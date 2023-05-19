@@ -286,6 +286,14 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
         return NULL;
     }
 
+    if (h->index < 0) {
+        return NULL;
+    }
+
+    if (payload->data2_len >= 100000 || payload->data2_len < 0) {
+        return NULL;
+    }
+
     // Encode the call request into a sendable buffer
     int8_t buf[100050];
     encode_data_call(h->index, payload, buf);
