@@ -342,13 +342,15 @@ rpc_data *rpc_call(rpc_client *cl, rpc_handle *h, rpc_data *payload) {
             memcpy(data2, buf + 3 + 8 + size_of_size_t, data2_len);
             
             // Check if the data2 is null, if the data2 is null, return an error
+            int is_null = 0;
             for(int i = 0; i < data2_len; i++) {
-                if(*((int8_t *)(data2 + i)) == 0) {
-                    continue;
-                } else {
-                    perror("inconsistent data2");
-                    return NULL;
+                if(*((int8_t *)(data2 + i)) != 0) {
+                    is_null = 1;
                 }
+            }
+            if(is_null == 0) {
+                perror("null data2 with non-zero data2_len");
+                return NULL;
             }
         }
 
