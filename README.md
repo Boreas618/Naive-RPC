@@ -133,3 +133,71 @@ where:
 
 The server is expected to listen for incoming connections on the port passed via command line arguments, on any
 of the hosts IPv6 network addresses
+
+# Protocol
+
+The protocol is built on TCP, which guarantees reliability. UDP is hard to guarantee reliability despite its speed. Therefore, the UDP version is hard to implement.
+
+1. Find
+
+The client sends find messages to the server to find the handlers:
+
+The first byte of the message is the size of the message.
+
+The second byte of the message is 0, which indicates that this is a find request.
+
+The remaining bytes are the name of the function.
+
+2. Response for find
+
+The server searches the handler list and finds the index for the respective handler:
+
+The first byte of the message is the size of the message.
+
+The second byte of the message is 2, which indicates that this is a handle response.
+
+The third byte of the message is the index of the function.
+
+If the function does not exist, the index -1 is returned, which will be handled by the client properly.
+
+3. Call
+
+The client sends call messages with the payload and index for the functions:
+
+The first byte of the message is the size of the message.
+
+The second byte of the message is 1, which indicates that this is a call request.
+
+The third byte of the message is the size of the size_t.
+
+The fourth byte of the message is the index of the function.
+
+The next **eight** bytes are the data1.
+
+The next sizeof(size_t) bytes are the length of the data2.
+
+The remaining bytes are the data2.
+
+Notice that 8 bytes are used for data1 here for better compatibility.
+
+4. Response for call
+
+The outcome for the call request:
+
+The first byte of the message is the size of the message.
+
+The second byte of the message is the size of the size_t.
+
+The third byte of the message is 3, which indicates that this is a call response.
+
+The next eight bytes of the message is the data1.
+
+The next sizeof(size_t) bytes are the length of the data2.
+
+The remaining bytes are the data2.
+
+If the outcome is NULL, the message is like:
+
+The first byte is the message of the size of the message.
+
+The second byte is 4, which indicates that this is an invalid response that will be handled properly by the client.
