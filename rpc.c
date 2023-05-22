@@ -372,11 +372,12 @@ void encode_data_find(char *name, int8_t *buf) {
 // Encode the call request into a sendable buffer
 void encode_data_call(int index, rpc_data *data, int8_t *buf) {
     // The first byte of the buffer is the size of the buffer
-    // The second byte of the buffer is 1, which indicates that this is a call
-    // request The third byte of the buffer is the size of the size_t The forth
-    // byte of the buffer is the index of the function The next four bytes are
-    // the data1 The next sizeof(size_t) bytes are the length of the data2 The
-    // remaining bytes are the data2
+    // The second byte of the buffer is 1, which indicates that this is a call request 
+    // The third byte of the buffer is the size of the size_t 
+    // The forth byte of the buffer is the index of the function 
+    // The next eight bytes are the data1 
+    // The next sizeof(size_t) bytes are the length of the data2 
+    // The remaining bytes are the data2
     int count_bytes = 0;
     buf[1] = 1;
     buf[2] = sizeof(size_t);
@@ -409,10 +410,12 @@ void encode_data_handle(int8_t index, int8_t *buf) {
 void encode_data_call_response(rpc_data *data, int8_t *buf) {
     // The first byte of the buffer is the size of the buffer
     // The second byte of the buffer is the size of the size_t
-    // The third byte of the buffer is 3, which indicates that this is a call
-    // response The forth byte of the buffer is the data1 The next
-    // sizeof(size_t) bytes are the length of the data2 The remaining bytes are
-    // the data2
+    // The third byte of the buffer is 3, which indicates that this is a call response 
+    // The next eight bytes of the buffer is the data1 
+    // The next sizeof(size_t) bytes are the length of the data2 The remaining bytes are the data2
+    // If the outcome is NULL, the message is like:
+    // The first byte is the message of the size of the message
+    // The second byte is 4, which indicates that this is a invalid response which will be handled properly by the client.
     if (data == NULL) {
         buf[0] = 2;
         buf[1] = 4;
